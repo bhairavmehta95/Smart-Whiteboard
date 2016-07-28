@@ -2,8 +2,12 @@ import numpy as np
 import cv2  
 
 
-original = cv2.imread('image.jpg')
-changed = cv2.imread('image_removed.jpg')
+# original = cv2.imread('image.jpg')
+# changed = cv2.imread('image_removed.jpg')
+
+## To show reverse: Uncomment below, comment out above
+changed = cv2.imread('image.jpg')
+original = cv2.imread('image_removed.jpg')
 
 img_a = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
 img_a = cv2.GaussianBlur(img_a, (11, 11), 0)
