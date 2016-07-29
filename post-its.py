@@ -44,36 +44,38 @@ if __name__ == '__main__':
 	try: src = sys.argv[1]
 	except: src = 1
 
-	ramp_frames = 30 
-	cap = cv2.VideoCapture(0)
-	cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
-	cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
-	for i in xrange(ramp_frames):
-		temp = cap.read()
+	# ramp_frames = 30 
+	# cap = cv2.VideoCapture(0)
+	# cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
+	# cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
+	# for i in xrange(ramp_frames):
+	# 	temp = cap.read()
 
-	camera_capture = get_image()
-	filename = "image.jpg"
-	cv2.imwrite(filename, camera_capture)
+	# camera_capture = get_image()
+	# filename = "image.jpg"
+	# cv2.imwrite(filename, camera_capture)
 
-	ret, img = cap.read()
-	img_full = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+	# reaet, img = cap.read()
+
+	img = cv2.imread('image_removed.jpg')
+	# img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	# img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
 	# equalize the histogram of the Y channel
-	img_full = cv2.equalizeHist(img_full)
-	img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+	# img_full = cv2.equalizeHist(img_full)
+	# img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
 
-	cv2.imshow('full histogram equilization', img_full )
-	cv2.imshow('Y channel equalization', img_yuv)
+	# cv2.imshow('full histogram equilization', img_full )
+	# cv2.imshow('Y channel equalization', img_yuv)
 	cv2.imshow('frame', img)
-	ch = 0xFF & cv2.waitKey()
-	cv2.destroyAllWindows()
-		# convert the YUV image back to RGB format
-	img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+	# ch = 0xFF & cv2.waitKey()
+	# cv2.destroyAllWindows()
+	# 	# convert the YUV image back to RGB format
+	# img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
 	# runs algorithm on both
 
 	# TO DO: find a way to combine
-	squares = find_squares(img)
+	squares = find_squares(img, 0)
 	# squares2 = find_squares(img_output)
 	# squares3 = find_squares(img_full)
 	# cv2.drawContours( img, squares2, -1, (0, 255, 0), 3 )

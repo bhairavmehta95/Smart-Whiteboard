@@ -28,8 +28,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.rl_config import defaultPageSize
 from reportlab.lib.units import inch
 
-from pits_whiteboard import find_squares
-
 styles = getSampleStyleSheet()
 
 
@@ -37,27 +35,17 @@ styles = getSampleStyleSheet()
 parts = []
 doc = SimpleDocTemplate('generated.pdf', pagesize = letter)
 save_count = 0
-BACKGROUND = 0
 
 # TO DO: Fix this so it takes in a numpy array
 # A function that computes the most dominant color and the number of occurances
 def compute_dominant_pixel(): 
+
 	im = PIL.Image.open('fakepath.jpg')
+
 	# will not be neccesary with smaller images
 	colors = im.getcolors(im.size[0] * im.size[1])
-	R = 0
-	G = 0
-	B = 0
-	count = len(colors)
 
-	for color in colors:
-		R += color[1][0]
-		G += color[1][1]
-		B += color[1][2]
-
-	print R/count, G/count, B/count
-	return [R/count, G/count, B/count]
-
+	return colors[0]
 
 # A function that simply reads and returns the image from 'cap(ture device)'
 def get_image(cap):
@@ -70,49 +58,23 @@ def generate_pdf():
 
 	doc.build(parts)
 
-# checks if color value is APPROXIMATELY white
-# if numbers are approx the same, then they are white/gray
-def dominant_pixel_diff(values):
-	min_val = min(values[0], values[1], values[2])
-	max_val = max(values[0], values[1], values[2])
-
-	# is approximately white bc min and max difference is 
-	
-	return abs(min_val - max_val)
-
-
 # A function that sets up the camera and takes the original bg picture
 def start_up():
-	global BACKGROUND
-
 	try: src = sys.argv[1]
-	except: src = 0
+	except: src = 1
 
 	ramp_frames = 30 
-	cap = cv2.VideoCapture(src)
+	cap = cv2.VideoCapture(0)
 	cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
 	cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
 	for i in xrange(ramp_frames):
 		temp = cap.read()
 
-
 	# capture, save image
 	camera_capture = get_image(cap)
 	filename = "whiteboard_session/full/0.jpg"
-
 	cv2.imwrite(filename, camera_capture)
 
-	im = PIL.Image.open(filename)
-
-	# will not be neccesary with smaller images
-	colors = im.getcolors(im.size[0] * im.size[1])
-
-	values = colors[0][1]
-
-	values = values[0] * values[0] + values[1] * values[1] + values[2] * values[2]
-
-	BACKGROUND = np.sqrt(values)
-	print BACKGROUND, 'is bg'
 	return cap
 
 # A function that calculates cosines between edges
@@ -140,11 +102,9 @@ def take_picture(cap, pic_count, centers):
 	changed = img
 
 	# Show the original
-	cv2.imshow('Background Image',original)
+	cv2.imshow('o',original)
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
-
-	img_changes = changed
 
 	# converts, blurs images for image processing
 	img_a = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
@@ -160,7 +120,8 @@ def take_picture(cap, pic_count, centers):
 
 	# dilate the thresholded image to fill in holes, then find contours
 	# on thresholded image
-
+	# adding canny edge detection to find differences
+	thresh = cv2.Canny(thresh.copy(), 0, 50, apertureSize=5)
 	thresh = cv2.dilate(thresh, None, iterations=2)
 	(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.CHAIN_APPROX_SIMPLE)
@@ -181,7 +142,7 @@ def take_picture(cap, pic_count, centers):
 
 		# compute the bounding box for the contour, draw it on the frame
 		(x, y, w, h) = cv2.boundingRect(c)
-		rect = cv2.rectangle(img_changes, (x, y), (x + w, y + h), (255, 0, 0), 2)
+		rect = cv2.rectangle(changed, (x, y), (x + w, y + h), (255, 0, 0), 2)
 		
 		cnt_len = cv2.arcLength(c, True)
 		cnt = cv2.approxPolyDP(c, 0.05*cnt_len, True)
@@ -197,49 +158,48 @@ def take_picture(cap, pic_count, centers):
 
 		############# POST ITS
 
+
+		# TO DO: Make more accurate/robust (like SQUARES.py)
+		if len(cnt) == 4 and cv2.contourArea(cnt) > 1000 and cv2.isContourConvex(cnt):
+			max_cos = np.max([angle_cos( cnt[i], cnt[(i+1) % 4], cnt[(i+2) % 4] ) for i in xrange(4)])
+			if max_cos < .4:
+				ar = w / float(h)
+				# a square will have an aspect ratio that is approximately
+				# equal to one
+				if ar >= 0.97 and ar <= 1.03:
+					shape = "post"
+					print 'found a post it note'
+
+
 		# splices the image where the difference was found
 		roi_original = original[y:y+h, x:x+w]
 		roi_changed = changed[y:y+h, x:x+w]
-
-		cv2.imshow('original', roi_original)
-		cv2.imshow('changed', roi_changed)
-		ch = 0xFF & cv2.waitKey()
-		cv2.destroyAllWindows()
 
 		# computes dominant color and pixel
 		cv2.imwrite('fakepath.jpg', roi_original)
 
 		original_dominant = compute_dominant_pixel()
+		original_color = original_dominant[1]
+		original_dominant = original_dominant[0]
 
 		cv2.imwrite('fakepath.jpg', roi_changed)	
 
 		changed_dominant = 	compute_dominant_pixel()
+		changed_color = changed_dominant[1]
+		changed_dominant = changed_dominant[0]
 
-		original_dominant = dominant_pixel_diff(original_dominant)
-		changed_dominant = dominant_pixel_diff(changed_dominant)
+		# TO DO: What if shapes are not same dominant pixel, check if one is NOT white
+		if original_dominant > changed_dominant:
+			context['change'] = 'added'
+
+		else:
+			context['change'] = 'removed'
 
 		# Saves the changed file
 		save_string = 'whiteboard_session/img_test/' + str(save_count) + '.jpg'
 		save_count += 1
 
-		# Original is more homogenous, so it is closer to a white or gray
-		if changed_dominant > original_dominant:
-			print "finding additions"
-			context['change'] = 'added'
-			cv2.imwrite('fakepath.jpg', roi_changed)
-			count_ = save_count
-			find_squares(count_)
-			cv2.imwrite(save_string, roi_changed)
-
-		else:
-			print "finding removals"
-			context['change'] = 'removed'
-			cv2.imwrite('fakepath.jpg', roi_original)
-			cv2.imshow('original in removed', roi_original)
-			count_ = save_count
-			find_squares(count_)
-			cv2.imwrite(save_string, roi_original)
-		
+		cv2.imwrite(save_string, roi_changed)
 
 		context['shape'] = shape
 		context['roi'] = rect
@@ -251,9 +211,6 @@ def take_picture(cap, pic_count, centers):
 	# Stores where we end the save count
 	end_save_count = save_count
 
-	string_to_write = 'whiteboard_session/changes/' + str(pic_count) + '.jpg'
-	cv2.imwrite(string_to_write, img_changes)
-	
 	#### BUILDING THE PDF ####
 
 	# build into document
@@ -269,69 +226,69 @@ def take_picture(cap, pic_count, centers):
  	parts.append(KeepTogether(Image(file)))
 
 
- # 	# Added post its
+ 	# Added post its
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Post Its Added at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Post Its Added at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'added':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'added':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
-	# # Removed post its
+	# Removed post its
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Post Its Removed at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Post Its Removed at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'removed':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'removed':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
- # 	# Added Other Objects
+ 	# Added Other Objects
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Other Objects Added at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Other Objects Added at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'added':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'added':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
-	# # Removed Other Objects
+	# Removed Other Objects
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Other Objects Removed at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Other Objects Removed at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'removed':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'removed':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
 
 	## End generation of PDF
@@ -339,21 +296,22 @@ def take_picture(cap, pic_count, centers):
 	#### SHOWING WHAT WAS CHANGED ####
 
 	cv2.drawContours(original, contours_final, -1, (255, 0, 0), 3 )
-	save_string = 'whiteboard_session/pdf/' + str(pic_count) + '.jpg'
+	save_string = 'whiteboard_session/pdf/' + str(count) + '.jpg'
 	cv2.imwrite(save_string, changed)
-	# cv2.imshow('im',original)
-	# cv2.imshow('im removed', changed)
+	cv2.imshow('im',original)
+	cv2.imshow('im removed', changed)
 
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
 
-	cv2.imshow('imdf', img_changes)
+	cv2.imshow('imdf',changed)
 
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
-
 
 	return centers
+	
+
 
 if __name__ == '__main__':
 	from glob import glob

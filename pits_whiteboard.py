@@ -1,19 +1,8 @@
-#!/usr/bin/env python
-
-import sys
-
-sys.path.append('/usr/local/lib/python2.7/site-packages')
-
-'''
-Simple "Square Detector" program.
-
-Loads several images sequentially and tries to find squares in each image.
-'''
-
 import numpy as np
 import cv2
 import cv2.cv as cv
 from PIL import ImageChops
+import PIL.Image
 from skimage.measure import compare_ssim as ssim
 import math, operator
 
@@ -84,28 +73,28 @@ def angle_cos(p0, p1, p2):
     d1, d2 = (p0-p1).astype('float'), (p2-p1).astype('float')
     return abs( np.dot(d1, d2) / np.sqrt( np.dot(d1, d1)*np.dot(d2, d2) ) )
 
-def find_squares(img, count):
-    img = cv2.GaussianBlur(img, (5, 5), 0)
+def find_squares(save_count):
+    img = cv2.imread('fakepath.jpg')
     squares = []
     centers = []
 
-    count = 0
-    sigma=0.33
-    # compute the median of the single channel pixel intensities
-    v = np.median(img)
+    # count = 0
+    # sigma=0.33
+    # # compute the median of the single channel pixel intensities
+    # v = np.median(img)
  
-    # apply automatic Canny edge detection using the computed median
-    lower = int(max(0, (1.0 - sigma) * v))
-    upper = int(min(255, (1.0 + sigma) * v))
+    # # apply automatic Canny edge detection using the computed median
+    # lower = int(max(0, (1.0 - sigma) * v))
+    # upper = int(min(255, (1.0 + sigma) * v))
 
     for gray in cv2.split(img):
         for thrs in xrange(0, 255, 255): ## CHANGE TO 255 WHEN DOING image differences, 26 OTHERWISE
             if thrs == 0:
-                #bin = cv2.Canny(gray, 0, 50, apertureSize=5)
-                bin = cv2.Canny(gray, lower, upper)
+                bin = cv2.Canny(gray, 0, 50, apertureSize=5)
+                #bin = cv2.Canny(gray, lower, upper)
                 bin = cv2.dilate(bin, None)
             else:
-                retval, bin = cv2.threshold(gray, thrs, 255, cv2.THRESH_BINARY)
+                retval, bin = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
             contours, hierarchy = cv2.findContours(bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
             for cnt in contours:
@@ -122,9 +111,24 @@ def find_squares(img, count):
                         # a square will have an aspect ratio that is approximately
                         # equal to one, otherwise, the shape is a rectangle
                         shape = "square" if ar >= 0.97 and ar <= 1.03 else "rectangle"  
-                        string = "whiteboard_session/squares/" + shape + str(count) + ".jpg"  
+                        string = "squares/" + shape + str(save_count) + ".jpg"  
                         roi_im = img[y:y+h, x:x+w]
-                        cv2.imwrite('fakepath.jpg', roi_im)
+                        cv2.imwrite('fakepath.jpg', roi_im)                                          
+
+                        im = PIL.Image.open('fakepath.jpg')
+
+                        # will not be neccesary with smaller images
+                        colors = im.getcolors(im.size[0] * im.size[1])
+
+                        values = colors[0][1]
+
+                        values = values[0] * values[0] + values[1] * values[1] + values[2] * values[2]
+
+                        values = np.sqrt(values)
+
+                        if abs(values - 255) < 50:
+                            continue
+
                         x_c = (2 * x + w) / 2
                         y_c = (2 * y + h) / 2
                         center_point = Center(x_c, y_c)
@@ -136,24 +140,12 @@ def find_squares(img, count):
                             print "writing", shape, " with id: ", string
                             centers.append(center_point)
                             cv2.imwrite(string, roi_im)
-                            count = count + 1
+                            save_count = save_count + 1
 
                         squares.append(cnt) 
                        # print shape
-    return squares
 
-if __name__ == '__main__':
-    from glob import glob
-    #for fn in glob('../cpp/IMG*.jpg'):
-    fn = 'hello.png' 
-    img = cv2.imread(fn)
-    squares = find_squares(img)
-    cv2.drawContours( img, squares, -1, (0, 255, 0), 3 )
+    cv2.drawContours( img, squares, -1, (255, 255, 255), 3 )
     cv2.imshow('squares', img)
     ch = 0xFF & cv2.waitKey()
-    # if ch == 27:
-    #     break
-    cv2.destroyAllWindows()
-
-
-
+    return squares
