@@ -30,14 +30,44 @@ from reportlab.lib.units import inch
 
 from pits_whiteboard import find_squares
 
-styles = getSampleStyleSheet()
 
+styles = getSampleStyleSheet()
 
 # Global variables for pdf
 parts = []
 doc = SimpleDocTemplate('generated.pdf', pagesize = letter)
 save_count = 0
 BACKGROUND = 0
+
+def speech_query():
+    r = sr.Recognizer()
+    m = sr.Microphone()
+
+    try:
+        print("A moment of silence, please...")
+        with m as source: r.adjust_for_ambient_noise(source)
+        print("Set minimum energy threshold to {}".format(r.energy_threshold))
+
+        print("Say something!")
+        with m as source: audio = r.listen(source)
+        print("Got it! Now to recognize it...")
+        try:
+            # recognize speech using Google Speech Recognition
+            value = r.recognize_google(audio)
+
+            # we need some special handling here to correctly print unicode characters to standard output
+            if str is bytes: # this version of Python uses bytes for strings (Python 2)
+                print(u"You said {}".format(value).encode("utf-8"))
+            else: # this version of Python uses unicode for strings (Python 3+)
+                print("You said {}".format(value))
+
+            return value
+        except sr.UnknownValueError:
+            print("Oops! Didn't catch that")
+        except sr.RequestError as e:
+            print("Uh oh! Couldn't request results from Google Speech Recognition service; {0}".format(e))
+    except KeyboardInterrupt:
+        pass
 
 # TO DO: Fix this so it takes in a numpy array
 # A function that computes the most dominant color and the number of occurances
@@ -158,10 +188,22 @@ def take_picture(cap, pic_count, centers):
 
 	thresh = cv2.threshold(img_diff, 10, 255, cv2.THRESH_BINARY)[1]
 
+
 	# dilate the thresholded image to fill in holes, then find contours
 	# on thresholded image
+	cv2.imshow('Thresholded', thresh) 
 
-	thresh = cv2.dilate(thresh, None, iterations=2)
+	ch = 0xFF & cv2.waitKey()
+	cv2.destroyAllWindows()
+
+	thresh = cv2.dilate(thresh, None, iterations=3)
+
+	cv2.imshow('Image Difference', img_diff)
+	cv2.imshow('Dilated', thresh) 
+
+	ch = 0xFF & cv2.waitKey()
+	cv2.destroyAllWindows()
+
 	(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.CHAIN_APPROX_SIMPLE)
 
@@ -341,8 +383,8 @@ def take_picture(cap, pic_count, centers):
 	cv2.drawContours(original, contours_final, -1, (255, 0, 0), 3 )
 	save_string = 'whiteboard_session/pdf/' + str(pic_count) + '.jpg'
 	cv2.imwrite(save_string, changed)
-	# cv2.imshow('im',original)
-	# cv2.imshow('im removed', changed)
+	cv2.imshow('im',original)
+	cv2.imshow('im removed', changed)
 
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
@@ -355,25 +397,54 @@ def take_picture(cap, pic_count, centers):
 
 	return centers
 
+class speech_thread(threading.Thread):
+    def __init__(self, threadID, name, counter):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.counter = counter
+    def run(self):
+        print "Starting " + self.name
+        text = speech_query()
+        print "Exiting " + self.name
+
+class t2(threading.Thread):
+    def __init__(self, threadID, name, counter):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.counter = counter
+    def run(self):
+        print "Starting " + self.name
+        print "Starting up, please wait..."
+		cap = start_up()
+		count = 1
+		centers = []
+		while True:
+			print "Please type h(elp), p(icture), or q(uit)"
+			val = raw_input('> ')
+			if val == 'h' or val == 'help':
+				print "This is a program that does fun things, try another command!"
+			elif val == 'q' or val == 'quit':
+				doc.build(parts)
+				break
+			elif val == 'p' or val == 'picture':
+				centers = take_picture(cap, count, centers)
+				count += 1
+			else:
+				print "Not a valid command, try again"
+        print "Exiting " + self.name
+
 if __name__ == '__main__':
 	from glob import glob
 	# global doc
-	print "Starting up, please wait..."
-	cap = start_up()
-	count = 1
-	centers = []
-	while True:
-		print "Please type h(elp), p(icture), or q(uit)"
-		val = raw_input('> ')
-		if val == 'h' or val == 'help':
-			print "This is a program that does fun things, try another command!"
-		elif val == 'q' or val == 'quit':
-			doc.build(parts)
-			break
-		elif val == 'p' or val == 'picture':
-			centers = take_picture(cap, count, centers)
-			count += 1
-		else:
-			print "Not a valid command, try again"
+
+	thread1 = speech_thread(1, "Thread-1", 1)
+    thread2 = t2(2, "Thread-2", 2)
+
+    # Start new Threads
+    thread1.start()
+    thread2.start()
+	
 
 	

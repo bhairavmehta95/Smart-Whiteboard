@@ -129,7 +129,7 @@ def find_squares(img, count):
                         y_c = (2 * y + h) / 2
                         center_point = Center(x_c, y_c)
 
-                        similarity = is_similar(center_point, centers)
+                        # similarity = is_similar(center_point, centers)
                         rms_eval = rms_evaluator()
 
                         if not similarity and not rms_eval:
