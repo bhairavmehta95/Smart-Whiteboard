@@ -29,6 +29,8 @@ from reportlab.rl_config import defaultPageSize
 from reportlab.lib.units import inch
 
 from pits_whiteboard import find_squares
+import speech_recognition as sr
+import threading
 
 
 styles = getSampleStyleSheet()
@@ -39,35 +41,38 @@ doc = SimpleDocTemplate('generated.pdf', pagesize = letter)
 save_count = 0
 BACKGROUND = 0
 
+is_taking_picture = False
+camera_is_dead = False
+
 def speech_query():
-    r = sr.Recognizer()
-    m = sr.Microphone()
+	r = sr.Recognizer()
+	m = sr.Microphone()
 
-    try:
-        print("A moment of silence, please...")
-        with m as source: r.adjust_for_ambient_noise(source)
-        print("Set minimum energy threshold to {}".format(r.energy_threshold))
+	try:
+		print("A moment of silence, please...")
+		with m as source: r.adjust_for_ambient_noise(source)
+		print("Set minimum energy threshold to {}".format(r.energy_threshold))
 
-        print("Say something!")
-        with m as source: audio = r.listen(source)
-        print("Got it! Now to recognize it...")
-        try:
-            # recognize speech using Google Speech Recognition
-            value = r.recognize_google(audio)
+		print("Say something!")
+		with m as source: audio = r.listen(source)
+		print("Got it! Now to recognize it...")
+		try:
+			# recognize speech using Google Speech Recognition
+			value = r.recognize_google(audio)
 
-            # we need some special handling here to correctly print unicode characters to standard output
-            if str is bytes: # this version of Python uses bytes for strings (Python 2)
-                print(u"You said {}".format(value).encode("utf-8"))
-            else: # this version of Python uses unicode for strings (Python 3+)
-                print("You said {}".format(value))
+			# we need some special handling here to correctly print unicode characters to standard output
+			if str is bytes: # this version of Python uses bytes for strings (Python 2)
+				print(u"You said {}".format(value).encode("utf-8"))
+			else: # this version of Python uses unicode for strings (Python 3+)
+				print("You said {}".format(value))
 
-            return value
-        except sr.UnknownValueError:
-            print("Oops! Didn't catch that")
-        except sr.RequestError as e:
-            print("Uh oh! Couldn't request results from Google Speech Recognition service; {0}".format(e))
-    except KeyboardInterrupt:
-        pass
+			return value
+		except sr.UnknownValueError:
+			print("Oops! Didn't catch that")
+		except sr.RequestError as e:
+			print("Uh oh! Couldn't request results from Google Speech Recognition service; {0}".format(e))
+	except KeyboardInterrupt:
+		pass
 
 # TO DO: Fix this so it takes in a numpy array
 # A function that computes the most dominant color and the number of occurances
@@ -311,70 +316,37 @@ def take_picture(cap, pic_count, centers):
  	parts.append(KeepTogether(Image(file)))
 
 
- # 	# Added post its
+ 	# Added post its
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Post Its Added at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Post Its Added at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'added':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'added':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
-	# # Removed post its
+	# Removed post its
  	
- # 	tmp = start_save_count
- # 	it = 0
+ 	tmp = start_save_count
+ 	it = 0
 
- # 	string = 'Post Its Removed at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
+ 	string = 'Post Its Removed at timestamp:' + str(start_save_count)
+ 	p = Paragraph(string, style)
+ 	parts.append(p)
 
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'removed':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
-
- # 	# Added Other Objects
- 	
- # 	tmp = start_save_count
- # 	it = 0
-
- # 	string = 'Other Objects Added at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
-
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'added':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
-
-	# # Removed Other Objects
- 	
- # 	tmp = start_save_count
- # 	it = 0
-
- # 	string = 'Other Objects Removed at timestamp:' + str(start_save_count)
- # 	p = Paragraph(string, style)
- # 	parts.append(p)
-
-	# while tmp < end_save_count:
-	# 	if context_dict[it]['shape'] != 'post' and context_dict[it]['change'] == 'removed':
-	# 		file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
-	# 		parts.append(KeepTogether(Image(file)))
-	# 	tmp += 1
-	# 	it += 1
-
+	while tmp < end_save_count:
+		if context_dict[it]['shape'] == 'post' and context_dict[it]['change'] == 'removed':
+			file = 'whiteboard_session/img_test/' + str(start_save_count) + '.jpg'
+			parts.append(KeepTogether(Image(file)))
+		tmp += 1
+		it += 1
 
 	## End generation of PDF
 
@@ -398,25 +370,32 @@ def take_picture(cap, pic_count, centers):
 	return centers
 
 class speech_thread(threading.Thread):
-    def __init__(self, threadID, name, counter):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.counter = counter
-    def run(self):
-        print "Starting " + self.name
-        text = speech_query()
-        print "Exiting " + self.name
+	def __init__(self, threadID, name, counter):
+		threading.Thread.__init__(self)
+		self.threadID = threadID
+		self.name = name
+		self.counter = counter
+	def run(self):
+		global is_taking_picture
+		global camera_is_dead
+		print "Starting " + self.name
+		while True:
+			if camera_is_dead:
+				return
+			if not is_taking_picture:
+				text = speech_query()
+		print "Exiting " + self.name
 
 class t2(threading.Thread):
-    def __init__(self, threadID, name, counter):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.counter = counter
-    def run(self):
-        print "Starting " + self.name
-        print "Starting up, please wait..."
+	def __init__(self, threadID, name, counter):
+		threading.Thread.__init__(self)
+		self.threadID = threadID
+		self.name = name
+		self.counter = counter
+	def run(self):
+		global is_taking_picture
+		print "Starting " + self.name
+		print "Starting up, please wait..."
 		cap = start_up()
 		count = 1
 		centers = []
@@ -429,22 +408,28 @@ class t2(threading.Thread):
 				doc.build(parts)
 				break
 			elif val == 'p' or val == 'picture':
+				is_taking_picture = True
 				centers = take_picture(cap, count, centers)
 				count += 1
+				is_taking_picture = False
 			else:
 				print "Not a valid command, try again"
-        print "Exiting " + self.name
+		print "Exiting " + self.name
 
 if __name__ == '__main__':
 	from glob import glob
 	# global doc
 
 	thread1 = speech_thread(1, "Thread-1", 1)
-    thread2 = t2(2, "Thread-2", 2)
+	thread2 = t2(2, "Thread-2", 2)
 
-    # Start new Threads
-    thread1.start()
-    thread2.start()
+	# Start new Threads
+	thread1.start()
+	thread2.start()
 	
 
-	
+	# TO DO: Kill both threads if user presses q
+	while True:
+		global camera_is_dead
+		if not thread2.is_alive():
+			camera_is_dead = True
