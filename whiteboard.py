@@ -31,6 +31,7 @@ from reportlab.lib.units import inch
 from pits_whiteboard import find_squares
 import speech_recognition as sr
 import threading
+from gen_wordcloud import generate_wordcloud
 
 
 styles = getSampleStyleSheet()
@@ -411,6 +412,10 @@ class picture_thread(threading.Thread):
 				print "This is a program that does fun things, try another command!"
 			elif val == 'q' or val == 'quit':
 				doc.build(parts)
+				file = open('full_transcript.txt', 'w')
+				file.write(full_transcript)
+				file.close()
+				generate_wordcloud()
 				break
 			elif val == 'p' or val == 'picture':
 				is_taking_picture = True
