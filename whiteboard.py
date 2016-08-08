@@ -43,6 +43,7 @@ BACKGROUND = 0
 
 is_taking_picture = False
 camera_is_dead = False
+full_transcript = ''
 
 def speech_query():
 	r = sr.Recognizer()
@@ -125,8 +126,8 @@ def start_up():
 
 	ramp_frames = 30 
 	cap = cv2.VideoCapture(src)
-	cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
-	cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
+	# cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
+	# cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
 	for i in xrange(ramp_frames):
 		temp = cap.read()
 
@@ -376,24 +377,28 @@ class speech_thread(threading.Thread):
 		self.name = name
 		self.counter = counter
 	def run(self):
-		global is_taking_picture
-		global camera_is_dead
+		global is_taking_picture, full_transcript, camera_is_dead
 		print "Starting " + self.name
 		while True:
 			if camera_is_dead:
 				return
 			if not is_taking_picture:
 				text = speech_query()
+				try:
+					full_transcript += text
+					full_transcript += '\n'
+				except:
+					pass
 		print "Exiting " + self.name
 
-class t2(threading.Thread):
+class picture_thread(threading.Thread):
 	def __init__(self, threadID, name, counter):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
 		self.name = name
 		self.counter = counter
 	def run(self):
-		global is_taking_picture
+		global is_taking_picture, full_transcript
 		print "Starting " + self.name
 		print "Starting up, please wait..."
 		cap = start_up()
@@ -409,6 +414,7 @@ class t2(threading.Thread):
 				break
 			elif val == 'p' or val == 'picture':
 				is_taking_picture = True
+				print "Your transcript is: ", full_transcript
 				centers = take_picture(cap, count, centers)
 				count += 1
 				is_taking_picture = False
@@ -416,20 +422,26 @@ class t2(threading.Thread):
 				print "Not a valid command, try again"
 		print "Exiting " + self.name
 
-if __name__ == '__main__':
+def run_whiteboard():
 	from glob import glob
 	# global doc
 
-	thread1 = speech_thread(1, "Thread-1", 1)
-	thread2 = t2(2, "Thread-2", 2)
+	# intialize threads, set as daemons so they exit when main thread ends
+	s = speech_thread(1, "speech-thread", 1)
+	s.daemon = True
+	p = picture_thread(2, "picture-thread", 2)
+	p.daemon = True
 
 	# Start new Threads
-	thread1.start()
-	thread2.start()
+	s.start()
+	p.start()
 	
 
-	# TO DO: Kill both threads if user presses q
+	#Kills both threads if user presses q
 	while True:
-		global camera_is_dead
-		if not thread2.is_alive():
-			camera_is_dead = True
+		if not p.is_alive():
+			return
+			
+
+if __name__ == '__main__':
+	run_whiteboard()
