@@ -20,6 +20,8 @@ import math, operator
 import datetime
 from time import strftime
 import os
+
+# PDF Import statements
 from reportlab.platypus.flowables import KeepTogether
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Image, Paragraph, Spacer
@@ -28,24 +30,28 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.rl_config import defaultPageSize
 from reportlab.lib.units import inch
 
+# Whiteboard code imports
 from pits_whiteboard import find_squares
 import speech_recognition as sr
 import threading
 from gen_wordcloud import generate_wordcloud
 
 
-styles = getSampleStyleSheet()
-
 # Global variables for pdf
+styles = getSampleStyleSheet()
 parts = []
 doc = SimpleDocTemplate('generated.pdf', pagesize = letter)
 save_count = 0
-BACKGROUND = 0
 
+# Boolean variables for control floq
 is_taking_picture = False
 camera_is_dead = False
+
+# string to store full transcript (Needs to be recorded in speech thread, used in whiteboard thread)
 full_transcript = ''
 
+# A function that asks the user to speak and records what he/she said during the recording
+# Uses google cloud speech API through SpeechRecognition Python package
 def speech_query():
 	r = sr.Recognizer()
 	m = sr.Microphone()
@@ -76,6 +82,7 @@ def speech_query():
 	except KeyboardInterrupt:
 		pass
 
+
 # TO DO: Fix this so it takes in a numpy array
 # A function that computes the most dominant color and the number of occurances
 def compute_dominant_pixel(): 
@@ -85,15 +92,18 @@ def compute_dominant_pixel():
 	R = 0
 	G = 0
 	B = 0
-	count = len(colors)
+	count = 0
 
 	for color in colors:
-		R += color[1][0]
-		G += color[1][1]
-		B += color[1][2]
+		# weighted average for most dominant pixel
+		R += color[1][0] * color[0]
+		G += color[1][1] * color[0]
+		B += color[1][2] * color[0]
+		count += color[0]
 
 	print R/count, G/count, B/count
 	return [R/count, G/count, B/count]
+
 
 
 # A function that simply reads and returns the image from 'cap(ture device)'
@@ -107,14 +117,13 @@ def generate_pdf():
 
 	doc.build(parts)
 
-# checks if color value is APPROXIMATELY white
+# helper to checks if color value is APPROXIMATELY white
 # if numbers are approx the same, then they are white/gray
 def dominant_pixel_diff(values):
 	min_val = min(values[0], values[1], values[2])
 	max_val = max(values[0], values[1], values[2])
 
-	# is approximately white bc min and max difference is 
-	
+	# is approximately white if min and max difference is close
 	return abs(min_val - max_val)
 
 
@@ -122,13 +131,21 @@ def dominant_pixel_diff(values):
 def start_up():
 	global BACKGROUND
 
-	try: src = sys.argv[1]
-	except: src = 0
+	try: 
+		src = 1
+		cap = cv2.VideoCapture(src)
+
+	except: 
+		src = 0
+		cap = cv2.VideoCapture(src)
 
 	ramp_frames = 30 
-	cap = cv2.VideoCapture(src)
+	cap = cv2.VideoCapture(0)
+	#cap = cv2.VideoCapture(src)
+
 	# cap.set(cv2.cv.CV_CAP_PROP_EXPOSURE, .5)
 	# cap.set(cv2.cv.CV_CAP_PROP_CONTRAST, 10000) 
+
 	for i in xrange(ramp_frames):
 		temp = cap.read()
 
@@ -139,17 +156,6 @@ def start_up():
 
 	cv2.imwrite(filename, camera_capture)
 
-	im = PIL.Image.open(filename)
-
-	# will not be neccesary with smaller images
-	colors = im.getcolors(im.size[0] * im.size[1])
-
-	values = colors[0][1]
-
-	values = values[0] * values[0] + values[1] * values[1] + values[2] * values[2]
-
-	BACKGROUND = np.sqrt(values)
-	print BACKGROUND, 'is bg'
 	return cap
 
 # A function that calculates cosines between edges
@@ -193,7 +199,7 @@ def take_picture(cap, pic_count, centers):
 	# calculates difference, thresholds
 	img_diff = cv2.absdiff(img_a, img_b)
 
-	thresh = cv2.threshold(img_diff, 10, 255, cv2.THRESH_BINARY)[1]
+	ret, thresh = cv2.threshold(img_diff,25,255,cv2.THRESH_BINARY)
 
 
 	# dilate the thresholded image to fill in holes, then find contours
@@ -203,16 +209,19 @@ def take_picture(cap, pic_count, centers):
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
 
-	thresh = cv2.dilate(thresh, None, iterations=3)
-
+	thresh = cv2.dilate(thresh, None, iterations=2)
+	#thresh = cv2.dilate(thresh, None)
+	
 	cv2.imshow('Image Difference', img_diff)
 	cv2.imshow('Dilated', thresh) 
 
 	ch = 0xFF & cv2.waitKey()
 	cv2.destroyAllWindows()
 
+	#(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+		#cv2.CHAIN_APPROX_SIMPLE)
 	(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-		cv2.CHAIN_APPROX_SIMPLE)
+		cv2.RETR_LIST)
 
 
 	# lists to store the dictionaries of contours
@@ -224,14 +233,24 @@ def take_picture(cap, pic_count, centers):
 	for c in contours:
 		context = {}
 
+		# compute the bounding box for the contour
+		(x, y, w, h) = cv2.boundingRect(c)
+
+		# draw it on frame
+		#rect = cv2.rectangle(img_changes, (x, y), (x + w, y + h))
+		
 		# if the area is too small, skip it
 		if cv2.contourArea(c) < 1000:
 			continue
 
-		# compute the bounding box for the contour, draw it on the frame
-		(x, y, w, h) = cv2.boundingRect(c)
-		rect = cv2.rectangle(img_changes, (x, y), (x + w, y + h), (255, 0, 0), 2)
-		
+		# AR = w:h
+		aspect_ratio = w/float(h)
+
+		# too lopsided, probably not the image we want
+		if aspect_ratio >= 8.0 or aspect_ratio <= .125:
+			continue
+
+		# Do we need this here?? :: I dont't think so TODO
 		cnt_len = cv2.arcLength(c, True)
 		cnt = cv2.approxPolyDP(c, 0.05*cnt_len, True)
 
@@ -242,18 +261,30 @@ def take_picture(cap, pic_count, centers):
 		roi = cv2.boundingRect(cnt)
 		cnt = cnt.reshape(-1, 2)
 
-		# check if post it note 
+		# check if post it note
 
 		############# POST ITS
 
-		# splices the image where the difference was found
+		# splices the image where the difference was found (gives it more than just what was there)
 		roi_original = original[y:y+h, x:x+w]
-		roi_changed = changed[y:y+h, x:x+w]
+		try:
+			roi_original = original[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
+		except:
+			pass
 
-		cv2.imshow('original', roi_original)
-		cv2.imshow('changed', roi_changed)
-		ch = 0xFF & cv2.waitKey()
-		cv2.destroyAllWindows()
+		roi_changed = changed[y:y+h, x:x+w]
+		try:
+			roi_changed = changed[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
+		except:
+			pass
+
+		try:
+			cv2.imshow('original', roi_original)
+			cv2.imshow('changed', roi_changed)
+			ch = 0xFF & cv2.waitKey()
+			cv2.destroyAllWindows()
+		except:
+			pass
 
 		# computes dominant color and pixel
 		cv2.imwrite('fakepath.jpg', roi_original)
@@ -273,28 +304,38 @@ def take_picture(cap, pic_count, centers):
 
 		# Original is more homogenous, so it is closer to a white or gray
 		if changed_dominant > original_dominant:
-			print "finding additions"
 			context['change'] = 'added'
 			cv2.imwrite('fakepath.jpg', roi_changed)
+
+			#img = cv2.imread('fakepath.jpg')
+			#cv2.imshow('img', img)
+
+			ch = 0xFF & cv2.waitKey()
+			cv2.destroyAllWindows()
+
+
 			count_ = save_count
 			find_squares(count_)
 			cv2.imwrite(save_string, roi_changed)
 
 		else:
-			print "finding removals"
 			context['change'] = 'removed'
 			cv2.imwrite('fakepath.jpg', roi_original)
-			cv2.imshow('original in removed', roi_original)
+
+			#img = cv2.imread('fakepath.jpg')
+			#cv2.imshow('img', img)
+
+			ch = 0xFF & cv2.waitKey()
+			cv2.destroyAllWindows()
+
 			count_ = save_count
 			find_squares(count_)
 			cv2.imwrite(save_string, roi_original)
 		
 
 		context['shape'] = shape
-		context['roi'] = rect
 
 		# Adds them to the list
-		contours_final.append(rect)
 		context_dict.append(context)
 
 	# Stores where we end the save count
@@ -354,10 +395,11 @@ def take_picture(cap, pic_count, centers):
 
 	#### SHOWING WHAT WAS CHANGED ####
 
-	cv2.drawContours(original, contours_final, -1, (255, 0, 0), 3 )
+	original_copy = original
+	cv2.drawContours(original_copy, contours_final, -1, (255, 0, 0), 3 )
 	save_string = 'whiteboard_session/pdf/' + str(pic_count) + '.jpg'
 	cv2.imwrite(save_string, changed)
-	cv2.imshow('im',original)
+	cv2.imshow('im',original_copy)
 	cv2.imshow('im removed', changed)
 
 	ch = 0xFF & cv2.waitKey()
@@ -371,6 +413,7 @@ def take_picture(cap, pic_count, centers):
 
 	return centers
 
+# thread class that runs the speech_query function and adds the text to the full transcript
 class speech_thread(threading.Thread):
 	def __init__(self, threadID, name, counter):
 		threading.Thread.__init__(self)
@@ -392,6 +435,7 @@ class speech_thread(threading.Thread):
 					pass
 		print "Exiting " + self.name
 
+# thread class to prompt the user with picture, quit, or help
 class picture_thread(threading.Thread):
 	def __init__(self, threadID, name, counter):
 		threading.Thread.__init__(self)
@@ -412,10 +456,13 @@ class picture_thread(threading.Thread):
 				print "This is a program that does fun things, try another command!"
 			elif val == 'q' or val == 'quit':
 				doc.build(parts)
-				file = open('full_transcript.txt', 'w')
-				file.write(full_transcript)
-				file.close()
-				generate_wordcloud()
+				try:
+					file = open('full_transcript.txt', 'w')
+					file.write(full_transcript)
+					file.close()
+					generate_wordcloud()
+				except:
+					pass
 				break
 			elif val == 'p' or val == 'picture':
 				is_taking_picture = True
@@ -427,6 +474,8 @@ class picture_thread(threading.Thread):
 				print "Not a valid command, try again"
 		print "Exiting " + self.name
 
+# main function that runs the whiteboard, spawns a picture thread and a speech thread
+# then constantly checks to see if picture thread is dead (if so, kills both)
 def run_whiteboard():
 	from glob import glob
 	# global doc

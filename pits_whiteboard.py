@@ -111,7 +111,7 @@ def find_squares(save_count):
                         # a square will have an aspect ratio that is approximately
                         # equal to one, otherwise, the shape is a rectangle
                         shape = "square" if ar >= 0.97 and ar <= 1.03 else "rectangle"  
-                        string = "squares/" + shape + str(save_count) + ".jpg"  
+                        string = "whiteboard_session/squares/" + shape + str(save_count) + ".jpg"  
                         roi_im = img[y:y+h, x:x+w]
                         cv2.imwrite('fakepath.jpg', roi_im)                                          
 
@@ -122,11 +122,10 @@ def find_squares(save_count):
 
                         values = colors[0][1]
 
-                        values = values[0] * values[0] + values[1] * values[1] + values[2] * values[2]
+                        value_max = max(values[0], values[1], values[2])
+                        value_min = min(values[0], values[1], values[2])
 
-                        values = np.sqrt(values)
-
-                        if abs(values - 255) < 50:
+                        if abs(value_max - value_min) < 30:
                             continue
 
                         x_c = (2 * x + w) / 2
@@ -134,9 +133,9 @@ def find_squares(save_count):
                         center_point = Center(x_c, y_c)
 
                         similarity = is_similar(center_point, centers)
-                        rms_eval = rms_evaluator()
+                        # rms_eval = rms_evaluator()
 
-                        if not similarity and not rms_eval:
+                        if not similarity: #and not rms_eval:
                             print "writing", shape, " with id: ", string
                             centers.append(center_point)
                             cv2.imwrite(string, roi_im)
@@ -145,7 +144,8 @@ def find_squares(save_count):
                         squares.append(cnt) 
                        # print shape
 
-    cv2.drawContours( img, squares, -1, (255, 255, 255), 3 )
-    cv2.imshow('squares', img)
+    img_copy = img
+    cv2.drawContours( img_copy, squares, -1, (255, 255, 255), 3 )
+    cv2.imshow('squares', img_copy)
     ch = 0xFF & cv2.waitKey()
     return squares
