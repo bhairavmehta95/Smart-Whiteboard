@@ -35,6 +35,7 @@ from pits_whiteboard import find_squares
 import speech_recognition as sr
 import threading
 from gen_wordcloud import generate_wordcloud
+import generate_gif
 
 
 # Global variables for pdf
@@ -267,16 +268,7 @@ def take_picture(cap, pic_count, centers):
 
 		# splices the image where the difference was found (gives it more than just what was there)
 		roi_original = original[y:y+h, x:x+w]
-		try:
-			roi_original = original[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
-		except:
-			pass
-
 		roi_changed = changed[y:y+h, x:x+w]
-		try:
-			roi_changed = changed[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
-		except:
-			pass
 
 		try:
 			cv2.imshow('original', roi_original)
@@ -302,9 +294,47 @@ def take_picture(cap, pic_count, centers):
 		save_string = 'whiteboard_session/img_test/' + str(save_count) + '.jpg'
 		save_count += 1
 
+		original_is_homogenous = False
+		changed_is_homogenous = False
+
+		# very close
+		if abs(original_dominant - changed_dominant) < 30:			
+			cv2.imwrite('fakepath.jpg', roi_original)
+			img_a = cv2.imread('fakepath.jpg')
+			img_a = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+			img_a = cv2.GaussianBlur(img_a, (5, 5), 0)
+
+			# bin = cv2.Canny(gray, 0, 50, apertureSize=5)
+			# #bin = cv2.Canny(gray, lower, upper)
+			# bin = cv2.dilate(bin, None)
+
+			retval, a = cv2.threshold(img_a, 10, 255, cv2.THRESH_BINARY)
+			contours_original, hierarchy = cv2.findContours(a, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+			cv2.imwrite('fakepath.jpg', roi_changed)
+			img_b = cv2.imread('fakepath.jpg')
+			img_b = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+			img_b = cv2.GaussianBlur(img_b, (5, 5), 0)
+
+			# bin = cv2.Canny(gray, 0, 50, apertureSize=5)
+			# #bin = cv2.Canny(gray, lower, upper)
+			# bin = cv2.dilate(bin, None)
+
+			retval, b = cv2.threshold(img_b, 10, 255, cv2.THRESH_BINARY)
+			contours_changed, hierarchy = cv2.findContours(b, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+			print "len(original):", len(contours_original), "& len (changed):", len(contours_changed) 
+			if len(contours_original) <= len(contours_changed):
+				original_is_homogenous = True
+
+
 		# Original is more homogenous, so it is closer to a white or gray
-		if changed_dominant > original_dominant:
+		if changed_dominant > original_dominant or original_is_homogenous:
 			context['change'] = 'added'
+			try:
+				roi_changed = changed[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
+			except:
+				pass
 			cv2.imwrite('fakepath.jpg', roi_changed)
 
 			#img = cv2.imread('fakepath.jpg')
@@ -320,6 +350,10 @@ def take_picture(cap, pic_count, centers):
 
 		else:
 			context['change'] = 'removed'
+			try:
+				roi_original = original[y-h/4:y+(5/4)*h, x-w/4:x+(5/4)*w]
+			except:
+				pass
 			cv2.imwrite('fakepath.jpg', roi_original)
 
 			#img = cv2.imread('fakepath.jpg')
@@ -461,6 +495,7 @@ class picture_thread(threading.Thread):
 					file.write(full_transcript)
 					file.close()
 					generate_wordcloud()
+					generate_gif()
 				except:
 					pass
 				break

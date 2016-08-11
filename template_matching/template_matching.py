@@ -17,6 +17,9 @@ w, h = template.shape[::-1]
 methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
 'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
 
+# These are the ones that work best
+methods = ['cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
+
 for picture in templates:
   cv2.imshow('Searching for: ', picture)
   ch = 0xFF & cv2.waitKey()
