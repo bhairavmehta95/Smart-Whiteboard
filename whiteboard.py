@@ -35,7 +35,7 @@ from pits_whiteboard import find_squares
 import speech_recognition as sr
 import threading
 from gen_wordcloud import generate_wordcloud
-import generate_gif
+from generate_gif import gen_video
 
 
 # Global variables for pdf
@@ -213,11 +213,11 @@ def take_picture(cap, pic_count, centers):
 	thresh = cv2.dilate(thresh, None, iterations=2)
 	#thresh = cv2.dilate(thresh, None)
 	
-	cv2.imshow('Image Difference', img_diff)
-	cv2.imshow('Dilated', thresh) 
+	# cv2.imshow('Image Difference', img_diff)
+	# cv2.imshow('Dilated', thresh) 
 
-	ch = 0xFF & cv2.waitKey()
-	cv2.destroyAllWindows()
+	# ch = 0xFF & cv2.waitKey()
+	# cv2.destroyAllWindows()
 
 	#(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		#cv2.CHAIN_APPROX_SIMPLE)
@@ -270,13 +270,13 @@ def take_picture(cap, pic_count, centers):
 		roi_original = original[y:y+h, x:x+w]
 		roi_changed = changed[y:y+h, x:x+w]
 
-		try:
-			cv2.imshow('original', roi_original)
-			cv2.imshow('changed', roi_changed)
-			ch = 0xFF & cv2.waitKey()
-			cv2.destroyAllWindows()
-		except:
-			pass
+		# try:
+		# 	cv2.imshow('original', roi_original)
+		# 	cv2.imshow('changed', roi_changed)
+		# 	ch = 0xFF & cv2.waitKey()
+		# 	cv2.destroyAllWindows()
+		# except:
+		# 	pass
 
 		# computes dominant color and pixel
 		cv2.imwrite('fakepath.jpg', roi_original)
@@ -309,7 +309,7 @@ def take_picture(cap, pic_count, centers):
 			# bin = cv2.dilate(bin, None)
 
 			retval, a = cv2.threshold(img_a, 10, 255, cv2.THRESH_BINARY)
-			contours_original, hierarchy = cv2.findContours(a, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+			contours_original, hierarchy = cv2.findContours(a, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
 			cv2.imwrite('fakepath.jpg', roi_changed)
 			img_b = cv2.imread('fakepath.jpg')
@@ -321,7 +321,7 @@ def take_picture(cap, pic_count, centers):
 			# bin = cv2.dilate(bin, None)
 
 			retval, b = cv2.threshold(img_b, 10, 255, cv2.THRESH_BINARY)
-			contours_changed, hierarchy = cv2.findContours(b, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+			contours_changed, hierarchy = cv2.findContours(b, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
 			print "len(original):", len(contours_original), "& len (changed):", len(contours_changed) 
 			if len(contours_original) <= len(contours_changed):
@@ -495,7 +495,7 @@ class picture_thread(threading.Thread):
 					file.write(full_transcript)
 					file.close()
 					generate_wordcloud()
-					generate_gif()
+					gen_video()
 				except:
 					pass
 				break

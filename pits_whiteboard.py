@@ -146,6 +146,10 @@ def find_squares(save_count):
 
     img_copy = img
     cv2.drawContours( img_copy, squares, -1, (255, 255, 255), 3 )
-    cv2.imshow('squares', img_copy)
-    ch = 0xFF & cv2.waitKey()
+    try:
+        cv2.imshow('squares', img_copy)
+        ch = 0xFF & cv2.waitKey()
+    except:
+        print "cannot show image, returning squares"
+    
     return squares
