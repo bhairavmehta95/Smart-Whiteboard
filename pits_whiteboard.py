@@ -6,16 +6,19 @@ import PIL.Image
 from skimage.measure import compare_ssim as ssim
 import math, operator
 
+# class to hold the center points of an image, used to make sure we don't capture the same image twice
 class Center:
     def __init__(self, x_, y_):
         self.x = x_
         self.y = y_
 
+# function to calculate distance between two center point objects
 def distance_centers(test_point, center_point):
     x_sq = (test_point.x - center_point.x) ** 2
     y_sq = (test_point.y - center_point.y) ** 2
     return (x_sq + y_sq) ** .5
 
+# checks if the center points are less than 30 pixels away from each other
 def is_similar(test_point, centers):
     for center_point in centers:
         distance = distance_centers(test_point, center_point)
@@ -24,6 +27,7 @@ def is_similar(test_point, centers):
 
     return False
 
+# uses root mean square calculations to see how similar two images are
 def rms_evaluator():
     roi_im = cv2.imread('fakepath.jpg')
 
@@ -69,10 +73,12 @@ def rms_evaluator():
                 print "SSIM FAILED: ", roi_im.shape, saved.shape
                 return False
 
+# calculates cosines between three points
 def angle_cos(p0, p1, p2):
     d1, d2 = (p0-p1).astype('float'), (p2-p1).astype('float')
     return abs( np.dot(d1, d2) / np.sqrt( np.dot(d1, d1)*np.dot(d2, d2) ) )
 
+# function to find all of the squares within an image
 def find_squares(save_count):
     img = cv2.imread('fakepath.jpg')
     squares = []
