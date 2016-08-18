@@ -17,9 +17,10 @@ In the future, the project will be utilized through a web application, to which 
 
 **To install a .whl file, `cd` into the directory it is installed in, and type `pip install {{filename}}`** 
 
-`string protip = "type pip install + 1st letter of the file name, and hit tab until you see the filename pop up`
-
-`bool user_happy = True`
+```cpp 
+string protip = "type pip install + 1st letter of the file name, and hit tab until you see the filename pop up";
+bool user_happy = true;
+```
   
 ## Pip Installs for Dependencies
 
@@ -37,5 +38,5 @@ In the future, the project will be utilized through a web application, to which 
 [Follow the 'Install from Prebuilt Binaries' instructions down to the letter.](http://docs.opencv.org/3.1.0/d5/de5/tutorial_py_setup_in_windows.html)
 
 ## How to Build
-1. Clone
-2. Run whiteboard.py
+1. Clone, `cd` into directory
+2. Run `python whiteboard.py`
