@@ -28,6 +28,7 @@ def is_similar(test_point, centers):
     return False
 
 # uses root mean square calculations to see how similar two images are
+# TO DO: Remimplement (currently not utilized)
 def rms_evaluator():
     roi_im = cv2.imread('fakepath.jpg')
 
@@ -94,6 +95,7 @@ def find_squares(save_count):
     # upper = int(min(255, (1.0 + sigma) * v))
 
     for gray in cv2.split(img):
+        # thresholding, dilation
         for thrs in xrange(0, 255, 255): ## CHANGE TO 255 WHEN DOING image differences, 26 OTHERWISE
             if thrs == 0:
                 bin = cv2.Canny(gray, 0, 50, apertureSize=5)
@@ -103,14 +105,19 @@ def find_squares(save_count):
                 retval, bin = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
             contours, hierarchy = cv2.findContours(bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
+            # loops through the contours found
             for cnt in contours:
+                # approximates the polynomial
                 cnt_len = cv2.arcLength(cnt, True)
                 cnt = cv2.approxPolyDP(cnt, 0.05*cnt_len, True)
+                
+                # the shape has 4 sides so it is some sort of rectangle/square
                 if len(cnt) == 4 and cv2.contourArea(cnt) > 1000 and cv2.isContourConvex(cnt):
                     (x, y, w, h) = cv2.boundingRect(cnt)
                     roi = cv2.boundingRect(cnt)
                     cnt = cnt.reshape(-1, 2)
-
+                    
+                    # finds the max cosine
                     max_cos = np.max([angle_cos( cnt[i], cnt[(i+1) % 4], cnt[(i+2) % 4] ) for i in xrange(4)])
                     if max_cos < .4:
                         ar = w / float(h)
