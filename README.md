@@ -40,3 +40,10 @@ bool user_happy = true;
 ## How to Build
 1. Clone, `cd` into directory
 2. Run `python whiteboard.py`
+
+## Contact
+
+Lost? 
+
+Bhairav Mehta - bhairavmehta95@gmail.com
+Ryan Pfalz - rpfalz14@gmail.com
