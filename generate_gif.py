@@ -1,4 +1,3 @@
-from images2gif_edited import writeGif
 import PIL.Image as Image
 import os
 
