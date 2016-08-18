@@ -103,6 +103,8 @@ def compute_dominant_pixel():
 		count += color[0]
 
 	print R/count, G/count, B/count
+	
+	# returns the average of each channel in list
 	return [R/count, G/count, B/count]
 
 
@@ -221,6 +223,8 @@ def take_picture(cap, pic_count, centers):
 
 	#(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		#cv2.CHAIN_APPROX_SIMPLE)
+		
+	# finds contours in thresholded image
 	(contours, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.RETR_LIST)
 
@@ -244,7 +248,7 @@ def take_picture(cap, pic_count, centers):
 		if cv2.contourArea(c) < 1000:
 			continue
 
-		# AR = w:h
+		# AspectRatio = w:h
 		aspect_ratio = w/float(h)
 
 		# too lopsided, probably not the image we want
@@ -287,6 +291,7 @@ def take_picture(cap, pic_count, centers):
 
 		changed_dominant = 	compute_dominant_pixel()
 
+		# calculates absolute value bw value of min & max channel
 		original_dominant = dominant_pixel_diff(original_dominant)
 		changed_dominant = dominant_pixel_diff(changed_dominant)
 
@@ -297,9 +302,11 @@ def take_picture(cap, pic_count, centers):
 		original_is_homogenous = False
 		changed_is_homogenous = False
 
-		# very close
+		# very close, not sure which is more homogenous
 		if abs(original_dominant - changed_dominant) < 30:			
 			cv2.imwrite('fakepath.jpg', roi_original)
+			
+			# converts to gray, blurs it
 			img_a = cv2.imread('fakepath.jpg')
 			img_a = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
 			img_a = cv2.GaussianBlur(img_a, (5, 5), 0)
@@ -308,6 +315,7 @@ def take_picture(cap, pic_count, centers):
 			# #bin = cv2.Canny(gray, lower, upper)
 			# bin = cv2.dilate(bin, None)
 
+			# thresholds, finds contours
 			retval, a = cv2.threshold(img_a, 10, 255, cv2.THRESH_BINARY)
 			contours_original, hierarchy = cv2.findContours(a, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
@@ -324,11 +332,13 @@ def take_picture(cap, pic_count, centers):
 			contours_changed, hierarchy = cv2.findContours(b, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
 			print "len(original):", len(contours_original), "& len (changed):", len(contours_changed) 
+			
+			# checks which has more contours; TODO: fix and find better way to check
 			if len(contours_original) <= len(contours_changed):
 				original_is_homogenous = True
 
 
-		# Original is more homogenous, so it is closer to a white or gray
+		# Original is more homogenous, so it is closer to a white or gray = something has been added to board
 		if changed_dominant > original_dominant or original_is_homogenous:
 			context['change'] = 'added'
 			try:
@@ -348,6 +358,7 @@ def take_picture(cap, pic_count, centers):
 			find_squares(count_)
 			cv2.imwrite(save_string, roi_changed)
 
+		# changed is more homogenous = something was erased or removed
 		else:
 			context['change'] = 'removed'
 			try:
