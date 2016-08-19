@@ -38,8 +38,9 @@ bool user_happy = true;
 [Follow the 'Install from Prebuilt Binaries' instructions down to the letter.](http://docs.opencv.org/3.1.0/d5/de5/tutorial_py_setup_in_windows.html)
 
 ## How to Build
-1. Clone, `cd` into directory (i.e `cd Desktop\3M_Whiteboard`)
-2. Run `python whiteboard.py`
+1. Clone files from Github, or download zip and extract
+2. Open _Command Prompt_ and `cd` (Change Directory) into download directory (i.e `cd Desktop\3M_Whiteboard`)
+3. Run `python whiteboard.py`
 
 ## Contact
 
