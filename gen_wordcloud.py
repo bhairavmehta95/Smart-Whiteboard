@@ -1,5 +1,5 @@
 from os import path
-from scipy.misc import imread
+from cv2 import imread as imread
 import matplotlib.pyplot as plt
 
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator

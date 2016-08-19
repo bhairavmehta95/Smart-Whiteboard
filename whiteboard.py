@@ -7,7 +7,6 @@ sys.path.append('/usr/local/lib/python2.7/site-packages')
 import numpy
 import cv2
 import cv2.cv as cv
-from squares import *
 import os
 import time
 import sys
@@ -15,7 +14,6 @@ import video
 from common import mosaic
 from PIL import ImageEnhance, ImageChops
 import PIL.Image
-from skimage.measure import compare_ssim as ssim
 import math, operator
 import datetime
 from time import strftime

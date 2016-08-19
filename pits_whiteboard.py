@@ -3,7 +3,7 @@ import cv2
 import cv2.cv as cv
 from PIL import ImageChops
 import PIL.Image
-from skimage.measure import compare_ssim as ssim
+#from skimage.measure import compare_ssim as ssim
 import math, operator
 
 # class to hold the center points of an image, used to make sure we don't capture the same image twice
@@ -29,50 +29,50 @@ def is_similar(test_point, centers):
 
 # uses root mean square calculations to see how similar two images are
 # TO DO: Remimplement (currently not utilized)
-def rms_evaluator():
-    roi_im = cv2.imread('fakepath.jpg')
+# def rms_evaluator():
+#     roi_im = cv2.imread('fakepath.jpg')
 
-    roi_im = cv2.cvtColor(roi_im, cv2.COLOR_BGR2GRAY)
+#     roi_im = cv2.cvtColor(roi_im, cv2.COLOR_BGR2GRAY)
 
-    from glob import glob
-    for fn in glob('img_test/*.jpg'):
-        saved = cv2.imread(fn)
-        saved = cv2.cvtColor(saved, cv2.COLOR_BGR2GRAY)
-        if abs(len(roi_im) - len(saved)) > .1*(min(len(roi_im), len(saved))):
-            return False
-        else:
-            min_length = 0
-            print roi_im.shape, saved.shape
-            if len(roi_im) > len(saved):
-                # CROP ROI
-                print "Cropping ROI"
-                roi_im = roi_im[0:saved.shape[0], 0:saved.shape[1]]
-                min_length = len(saved)
+#     from glob import glob
+#     for fn in glob('img_test/*.jpg'):
+#         saved = cv2.imread(fn)
+#         saved = cv2.cvtColor(saved, cv2.COLOR_BGR2GRAY)
+#         if abs(len(roi_im) - len(saved)) > .1*(min(len(roi_im), len(saved))):
+#             return False
+#         else:
+#             min_length = 0
+#             print roi_im.shape, saved.shape
+#             if len(roi_im) > len(saved):
+#                 # CROP ROI
+#                 print "Cropping ROI"
+#                 roi_im = roi_im[0:saved.shape[0], 0:saved.shape[1]]
+#                 min_length = len(saved)
 
-                if saved.shape[0] > roi_im.shape[0]:
-                    saved = saved[0:roi_im.shape[0], 0:saved.shape[1]]
-                if saved.shape[1] > roi_im.shape[1]:
-                    saved = saved[0:saved.shape[0], 0:roi_im.shape[1]]
-            else:
-                # CROP SAVED
-                print "Cropping Saved"
-                saved = saved[0:roi_im.shape[0], 0:roi_im.shape[1]]
-                min_length = len(roi_im)
+#                 if saved.shape[0] > roi_im.shape[0]:
+#                     saved = saved[0:roi_im.shape[0], 0:saved.shape[1]]
+#                 if saved.shape[1] > roi_im.shape[1]:
+#                     saved = saved[0:saved.shape[0], 0:roi_im.shape[1]]
+#             else:
+#                 # CROP SAVED
+#                 print "Cropping Saved"
+#                 saved = saved[0:roi_im.shape[0], 0:roi_im.shape[1]]
+#                 min_length = len(roi_im)
 
-                if roi_im.shape[0] > saved.shape[0]:
-                    roi_im = roi_im[0:saved.shape[0], 0:roi_im.shape[1]]
-                if roi_im.shape[1] > saved.shape[1]:
-                    roi_im = roi_im[0:roi_im.shape[0], 0:saved.shape[1]]
-            try:
-                ssim_out = ssim(roi_im, saved)
-                print "SSIM:", ssim_out
-                if ssim_out > .5:
-                    return True
-                else:
-                    return False
-            except:
-                print "SSIM FAILED: ", roi_im.shape, saved.shape
-                return False
+#                 if roi_im.shape[0] > saved.shape[0]:
+#                     roi_im = roi_im[0:saved.shape[0], 0:roi_im.shape[1]]
+#                 if roi_im.shape[1] > saved.shape[1]:
+#                     roi_im = roi_im[0:roi_im.shape[0], 0:saved.shape[1]]
+#             try:
+#                 ssim_out = ssim(roi_im, saved)
+#                 print "SSIM:", ssim_out
+#                 if ssim_out > .5:
+#                     return True
+#                 else:
+#                     return False
+#             except:
+#                 print "SSIM FAILED: ", roi_im.shape, saved.shape
+#                 return False
 
 # calculates cosines between three points
 def angle_cos(p0, p1, p2):
